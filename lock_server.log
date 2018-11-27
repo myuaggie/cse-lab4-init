@@ -1,0 +1,12 @@
+1541681396403:	Server: start acquire: 127.0.0.1:23790
+1541681396403:	Server: direct acquire: 127.0.0.1:23790
+1541681398404:	Server: start acquire: 127.0.0.1:30074
+1541681398404:	Server: owner now: 127.0.0.1:23790
+1541681398404:	Server: acquire: revoke127.0.0.1:23790
+1541681398404:	handler_mgr::get_handle trying to bind...23790
+1541681398405:	handle_mgr::get_handle bind succeeded 23790
+1541681398405:	Server: start release: 127.0.0.1:23790
+1541681398405:	Server: release: set owner 127.0.0.1:30074
+1541681398405:	handler_mgr::get_handle trying to bind...30074
+1541681398405:	handle_mgr::get_handle bind succeeded 30074
+1541681398405:	Server: release: retry 127.0.0.1:30074

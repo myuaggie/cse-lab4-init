@@ -1,0 +1,5 @@
+	im: put_inode 1
+	im: get_inode 1
+	im: put_inode 1
+	im: get_inode 1
+	im: put_inode 1
