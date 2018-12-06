@@ -95,6 +95,7 @@ block_manager::write_block(uint32_t id, const char *buf)
 inode_manager::inode_manager()
 {
   bm = new block_manager();
+printf("init im\n");
   uint32_t root_dir = alloc_inode(extent_protocol::T_DIR);
   if (root_dir != 1) {
     printf("\tim: error! alloc first inode %d, should be 1\n", root_dir);
@@ -123,6 +124,7 @@ inode_manager::alloc_inode(uint32_t type)
     inode->size = 0;
     inode->atime = inode->mtime = inode->ctime = (unsigned int)time(NULL);
     put_inode(inode_idx, inode);
+printf("\tim: alloc_inode %d\n", inode_idx);
     return inode_idx; 
   }
   return 1;
@@ -136,6 +138,7 @@ inode_manager::free_inode(uint32_t inum)
    * note: you need to check if the inode is already a freed one;
    * if not, clear it, and remember to write back to disk.
    */
+printf("\tim: free_inode %d\n", inum);
   if (inum >= INODE_NUM) return;
   inode_t * inode = get_inode(inum);
   if (inode->type == 0) return;
@@ -252,6 +255,7 @@ inode_manager::read_file(uint32_t inum, char **buf_out, int *size)
   put_inode(inum, inode);
   free(inode);
 
+printf("\tim: read_file %d: %s\n", inum, *buf_out);
 /* alloc/free blocks if needed */
   return;
 }
@@ -390,5 +394,117 @@ inode_manager::remove_file(uint32_t inum)
     }
   }
   free_inode(inum);
+  return;
+}
+
+void
+inode_manager::append_block(uint32_t inum, blockid_t &bid)
+{
+  /*
+   * your code goes here.
+   */
+printf("im: append_block\n");
+  if (inum >= INODE_NUM) return;
+  inode_t *inode = get_inode(inum);
+  int block_num = inode->size / BLOCK_SIZE;
+  if (inode->size % BLOCK_SIZE != 0){
+    block_num ++;
+  }
+  blockid_t indirect_blocks[NINDIRECT];
+  if (block_num < NDIRECT){
+    bid = bm->alloc_block();
+    inode->blocks[block_num] = bid;  
+  }
+  else if (block_num == NDIRECT){
+    inode->blocks[NDIRECT] = bm->alloc_block();
+    bm->read_block(inode->blocks[NDIRECT], (char*)indirect_blocks);
+    bid = bm->alloc_block();
+    indirect_blocks[0] = bid;
+    bm->write_block(inode->blocks[NDIRECT], (char*)indirect_blocks);
+  }
+  else {
+    bm->read_block(inode->blocks[NDIRECT], (char*)indirect_blocks);
+    bid = bm->alloc_block();
+    indirect_blocks[block_num-NDIRECT] = bid;
+    bm->write_block(inode->blocks[NDIRECT], (char*)indirect_blocks);
+  }
+  inode->size += BLOCK_SIZE;
+  put_inode(inum, inode);
+  return;
+}
+
+void
+inode_manager::get_block_ids(uint32_t inum, std::list<blockid_t> &block_ids)
+{
+  /*
+   * your code goes here.
+   */
+printf("im: get_block_ids\n");
+  if (inum >= INODE_NUM) return;
+  inode_t *inode = get_inode(inum);
+  int block_num = inode->size / BLOCK_SIZE;
+  if (inode->size % BLOCK_SIZE != 0){
+    block_num ++;
+  }
+  blockid_t indirect_blocks[NINDIRECT];
+  if (block_num <= NDIRECT){
+    for (int i=0;i<block_num;i++){
+      block_ids.push_back(inode->blocks[i]);
+printf("%d\n", inode->blocks[i]);
+    }
+  }
+  else {
+    int block_idx;
+    for (block_idx=0;block_idx<NDIRECT;block_idx++){
+      block_ids.push_back(inode->blocks[block_idx]);
+printf("%d\n", inode->blocks[block_idx]);
+    }
+    bm->read_block(inode->blocks[NDIRECT], (char*)indirect_blocks);
+    for (; block_idx<block_num;block_idx++){
+      block_ids.push_back(indirect_blocks[block_idx-NDIRECT]);
+printf("%d\n", indirect_blocks[block_idx-NDIRECT]);
+    }
+  }
+  return;
+}
+
+void
+inode_manager::read_block(blockid_t id, char buf[BLOCK_SIZE])
+{
+  /*
+   * your code goes here.
+   */
+/*  if (id<0 || id >= BLOCK_NUM || buf == NULL) return;
+  memcpy(buf, disk::blocks[id], BLOCK_SIZE);
+  return;*/
+printf("im: read_block\n");
+  bm->read_block(id, buf);
+}
+
+void
+inode_manager::write_block(blockid_t id, const char buf[BLOCK_SIZE])
+{
+  /*
+   * your code goes here.
+   */
+/*  if (id<0 || id >= BLOCK_NUM || buf == NULL) return;
+  memcpy(disk::blocks[id], buf, BLOCK_SIZE);
+  return;*/
+printf("im: write_block\n");
+  bm->write_block(id, buf);
+}
+
+void
+inode_manager::complete(uint32_t inum, uint32_t size)
+{
+  /*
+   * your code goes here.
+   */
+printf("im: complete\n");
+  if (inum >= INODE_NUM) return;
+  inode_t *inode = get_inode(inum);
+  inode->size = size;
+  inode->mtime = (unsigned int)time(NULL);
+  put_inode(inum, inode);
   return;
 }
